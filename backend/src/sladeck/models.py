@@ -346,3 +346,37 @@ class AuditEvent(Base):
         nullable=False,
         server_default=func.now(),
     )
+
+
+
+class SLANotification(Base):
+    __tablename__ = "sla_notifications"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["request_id", "organization_id"],
+            ["requests.id", "requests.organization_id"],
+            name="fk_sla_notifications_request_org",
+            ondelete="RESTRICT",
+        ),
+        UniqueConstraint(
+            "request_id",
+            "stage",
+            "kind",
+            name="uq_sla_notification_request_stage_kind",
+        ),
+        Index("ix_sla_notifications_request_created", "request_id", "created_at"),
+        Index("ix_sla_notifications_org_created", "organization_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    stage: Mapped[str] = mapped_column(String(40), nullable=False)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

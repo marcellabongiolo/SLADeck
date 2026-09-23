@@ -102,6 +102,7 @@ class Organization(Base):
     requests: Mapped[list["Request"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
+        overlaps="sla_policy,requests",
     )
 
 
@@ -168,7 +169,10 @@ class SLAPolicy(Base):
     )
 
     organization: Mapped[Organization] = relationship(back_populates="sla_policies")
-    requests: Mapped[list["Request"]] = relationship(back_populates="sla_policy")
+    requests: Mapped[list["Request"]] = relationship(
+        back_populates="sla_policy",
+        overlaps="organization,requests",
+    )
 
 
 class Request(Base):
@@ -243,8 +247,14 @@ class Request(Base):
         onupdate=func.now(),
     )
 
-    organization: Mapped[Organization] = relationship(back_populates="requests")
-    sla_policy: Mapped[SLAPolicy | None] = relationship(back_populates="requests")
+    organization: Mapped[Organization] = relationship(
+        back_populates="requests",
+        overlaps="sla_policy,requests",
+    )
+    sla_policy: Mapped[SLAPolicy | None] = relationship(
+        back_populates="requests",
+        overlaps="organization,requests",
+    )
 
 
 

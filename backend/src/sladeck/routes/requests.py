@@ -4,10 +4,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import record_audit_event
 from ..db import get_db
 from ..dependencies import get_organization_membership, require_roles
 from ..models import (
@@ -169,6 +170,19 @@ def create_request(
     session.add(request)
     session.flush()
     recalculate_deadlines(request, policy)
+    record_audit_event(
+        session,
+        organization_id=organization_id,
+        request_id=request.id,
+        actor_user_id=membership.user_id,
+        event_type="request_created",
+        data={
+            "title": request.title,
+            "priority": request.priority,
+            "assignee_id": request.assignee_id,
+            "sla_policy_id": request.sla_policy_id,
+        },
+    )
     session.commit()
     session.refresh(request)
     return request_to_read(request)
@@ -202,6 +216,10 @@ def update_request(
     session: Annotated[Session, Depends(get_db)],
 ) -> RequestRead:
     request = get_request_or_404(session, organization_id, request_id)
+    previous_status = request.status
+    previous_priority = request.priority
+    previous_assignee_id = request.assignee_id
+    previous_sla_policy_id = request.sla_policy_id
 
     if payload.status is not None:
         try:
@@ -249,6 +267,43 @@ def update_request(
     ) and policy is not None:
         recalculate_deadlines(request, policy)
 
+    if request.status != previous_status:
+        record_audit_event(
+            session,
+            organization_id=organization_id,
+            request_id=request.id,
+            actor_user_id=membership.user_id,
+            event_type="status_changed",
+            data={"from": previous_status, "to": request.status},
+        )
+    if request.priority != previous_priority:
+        record_audit_event(
+            session,
+            organization_id=organization_id,
+            request_id=request.id,
+            actor_user_id=membership.user_id,
+            event_type="priority_changed",
+            data={"from": previous_priority, "to": request.priority},
+        )
+    if request.assignee_id != previous_assignee_id:
+        record_audit_event(
+            session,
+            organization_id=organization_id,
+            request_id=request.id,
+            actor_user_id=membership.user_id,
+            event_type="assignee_changed",
+            data={"from": previous_assignee_id, "to": request.assignee_id},
+        )
+    if request.sla_policy_id != previous_sla_policy_id:
+        record_audit_event(
+            session,
+            organization_id=organization_id,
+            request_id=request.id,
+            actor_user_id=membership.user_id,
+            event_type="sla_policy_changed",
+            data={"from": previous_sla_policy_id, "to": request.sla_policy_id},
+        )
+
     session.commit()
     session.refresh(request)
     return request_to_read(request)
@@ -274,13 +329,21 @@ def mark_first_response(
 
     if request.first_responded_at is None:
         request.first_responded_at = datetime.now(timezone.utc)
+        record_audit_event(
+            session,
+            organization_id=organization_id,
+            request_id=request.id,
+            actor_user_id=membership.user_id,
+            event_type="first_response_recorded",
+            data={"first_responded_at": request.first_responded_at},
+        )
         session.commit()
         session.refresh(request)
 
     return request_to_read(request)
 
 
-@router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{request_id}", status_code=status.HTTP_409_CONFLICT)
 def delete_request(
     organization_id: uuid.UUID,
     request_id: uuid.UUID,
@@ -289,8 +352,9 @@ def delete_request(
         Depends(require_roles(MembershipRole.owner, MembershipRole.admin)),
     ],
     session: Annotated[Session, Depends(get_db)],
-) -> Response:
-    request = get_request_or_404(session, organization_id, request_id)
-    session.delete(request)
-    session.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+) -> None:
+    get_request_or_404(session, organization_id, request_id)
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Requests are retained for audit history; close the request instead",
+    )

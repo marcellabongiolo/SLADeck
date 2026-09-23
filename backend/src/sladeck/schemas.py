@@ -152,6 +152,14 @@ class RequestRead(BaseModel):
 class CommentCreate(BaseModel):
     body: str = Field(min_length=1, max_length=10000)
 
+    @field_validator("body")
+    @classmethod
+    def body_must_contain_text(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("Comment body cannot be blank")
+        return stripped
+
 
 class CommentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)

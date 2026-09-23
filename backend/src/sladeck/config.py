@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
     database_url: str = "postgresql+psycopg://sladeck:sladeck@localhost:5432/sladeck"
+    jwt_secret: str = "development-only-change-me"
+    jwt_algorithm: str = "HS256"
+    access_token_minutes: int = 15
+    refresh_token_days: int = 14
 
     model_config = SettingsConfigDict(
         env_prefix="SLADECK_",

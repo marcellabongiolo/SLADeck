@@ -219,6 +219,10 @@ class Request(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    first_responded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
     resolution_due_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

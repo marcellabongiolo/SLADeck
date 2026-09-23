@@ -1,309 +1,157 @@
 # SLADeck
 
-SLADeck is a full-stack SaaS project for teams that manage incoming requests, ownership, priorities and service-level deadlines.
+SLADeck is a portfolio-ready multi-tenant SaaS for support and operations teams. It manages service requests, SLAs, assignments, comments, immutable audit events, automated escalation notifications and operational analytics.
 
-The project is being built as a multi-tenant product with a Python/FastAPI backend, PostgreSQL, Redis-backed background work and a Next.js/TypeScript frontend.
+## Architecture
 
-> Status: early development. The initial FastAPI + Next.js foundation is being implemented through Issue #1. Features are documented as implemented only after they are merged and covered by tests.
-
-## Product idea
-
-A workspace receives operational requests. Team members can assign owners, set priorities, collaborate through comments and track whether each request is on time, approaching its SLA deadline or overdue.
-
-The MVP will support:
-
-- user accounts and authentication;
-- organizations/workspaces and team membership;
-- role-based permissions;
-- requests with status, priority, assignee and SLA deadline;
-- comments and immutable audit events;
-- SLA policies and deadline calculation;
-- background escalation/notification jobs;
-- searchable/filterable dashboard;
-- API documentation;
-- automated tests, Docker and CI.
-
-## Planned architecture
-
-```text
+```
 Next.js + TypeScript
         |
-        | REST API
         v
-FastAPI
-   |         \
-   |          \ background jobs
-   v           v
-PostgreSQL   Redis + worker
+     FastAPI
+        |
+        v
+   PostgreSQL <---- Celery worker
+        ^              ^
+        |              |
+        +---------- Redis
+                       ^
+                       |
+                  Celery Beat
 ```
 
-See `docs/architecture.md` for the current design.
+The Docker Compose stack includes PostgreSQL, Redis, a migration job, FastAPI, Celery Worker, Celery Beat and the Next.js frontend.
 
-## Development workflow
+## Implemented capabilities
 
-Work is developed through:
+- authentication with access/refresh tokens;
+- organization-scoped RBAC and tenant isolation;
+- request inbox with search and status/priority filters;
+- SLA policies and first-response/resolution deadlines;
+- request assignment and lifecycle controls;
+- comments and request activity timeline;
+- immutable audit events;
+- idempotent SLA warning/breach notifications;
+- in-app notification center;
+- operational analytics for workload and SLA health;
+- PostgreSQL migrations;
+- automated backend tests and coverage gate;
+- frontend typecheck and production build;
+- Docker Compose local stack;
+- GitHub Actions validation for backend, frontend and container builds.
 
-```text
-Issue -> branch -> implementation -> tests -> pull request -> CI -> merge
+## Quickstart with Docker
+
+Prerequisites: Docker with Compose support.
+
+1. Create a local environment file:
+
+```bash
+cp .env.example .env
 ```
 
-The repository will evolve issue by issue so the Git history reflects the engineering process rather than a single generated code dump.
+2. Set a non-default `SLADECK_JWT_SECRET` in `.env`.
 
+3. Start the complete stack:
 
-## Foundation development
+```bash
+docker compose up --build
+```
 
-The first implementation milestone introduces:
+4. Open:
 
-- a FastAPI backend package;
-- environment-based backend settings;
-- a health endpoint at `GET /health`;
-- a Next.js 16 + React 19 + TypeScript frontend shell;
-- strict TypeScript validation;
-- pytest + Ruff backend checks;
-- GitHub Actions for backend and frontend validation.
+- Frontend: http://localhost:3000
+- API: http://localhost:8000
+- OpenAPI: http://localhost:8000/docs
+
+The migration container applies the current Alembic schema before the API and worker services start.
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+To remove the local PostgreSQL volume as well:
+
+```bash
+docker compose down -v
+```
+
+## Local development
 
 ### Backend
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
+alembic upgrade head
 uvicorn sladeck.api:app --reload
 ```
 
-The API will be available at `http://localhost:8000`.
+Set `SLADECK_DATABASE_URL` and `SLADECK_REDIS_URL` when PostgreSQL and Redis are not running on their defaults.
+
+Run quality checks:
+
+```bash
+ruff check .
+pytest -q --cov=sladeck --cov-report=term-missing
+```
+
+The backend coverage configuration requires at least 90%.
 
 ### Frontend
 
 ```bash
 cd frontend
 npm install
+npm run typecheck
+npm run build
 npm run dev
 ```
 
-The web app will be available at `http://localhost:3000`.
+For the frontend to call a non-default API, set `NEXT_PUBLIC_API_URL`.
 
-PostgreSQL, Alembic, authentication and the SLA domain model belong to later issues and are intentionally not claimed as implemented yet.
+## Main workflow
 
+1. Register or sign in.
+2. Create/select an organization.
+3. Create an SLA policy.
+4. Create a request.
+5. Assign and update the request.
+6. Record first response and comments.
+7. Worker/Beat checks SLA deadlines.
+8. Notifications and audit events are persisted.
+9. Analytics show workload and SLA health.
 
-## PostgreSQL domain foundation
+## Security and tenant isolation
 
-The database layer uses SQLAlchemy 2 with PostgreSQL and Alembic migrations.
+Business data is constrained by organization membership. Cross-tenant access is covered by integration tests, including request and activity access. Request, policy and membership relationships also enforce organization ownership at the database/API boundary.
 
-The initial relational model contains:
+Secrets are provided through environment variables. Production configuration rejects the default development JWT secret.
 
-- `User`
-- `Organization`
-- `Membership`
-- `SLAPolicy`
-- `Request`
+## CI
 
-`Membership` connects a user to an organization with one of the planned roles. Requests
-store an explicit `organization_id`, and requester/assignee references are constrained
-against memberships in that same organization. This adds a database-level tenant-safety
-invariant before application authorization is implemented.
+GitHub Actions validates:
 
-With `SLADECK_DATABASE_URL` pointing to a PostgreSQL database:
+- Python 3.12 and 3.13;
+- Ruff;
+- PostgreSQL/Redis-backed pytest suite;
+- 90% backend coverage gate;
+- frontend TypeScript checks;
+- frontend production build;
+- Docker Compose configuration;
+- backend and frontend container builds.
 
-```bash
-cd backend
-alembic upgrade head
-```
+## Known limitations
 
-To roll the current schema back:
+- This is an MVP, not a production deployment platform.
+- There is no external email/SMS notification provider.
+- Analytics are intentionally focused on operational request/SLA metrics.
+- The Compose configuration is designed for reproducible local/demo environments rather than high availability.
+- The frontend currently uses a browser-side API client and local session storage rather than a dedicated BFF.
+- No cloud deployment manifests are included.
 
-```bash
-alembic downgrade base
-```
+## Architecture documentation
 
-CI starts a real PostgreSQL service and verifies both the ORM relationships and the
-ability to create the schema from an empty database using Alembic.
-
-
-## Authentication and organization RBAC
-
-SLADeck uses Argon2 password hashing, signed short-lived access tokens and opaque refresh
-tokens backed by revocable database sessions.
-
-Implemented authentication endpoints:
-
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET /auth/me`
-
-Organization endpoints require a valid Bearer access token. Creating an organization
-automatically makes the creator its `owner`.
-
-Roles:
-
-- `owner` — highest organization role;
-- `admin` — can manage ordinary members and managers;
-- `manager` — organization member with elevated domain permissions reserved for later features;
-- `member` — standard organization member.
-
-Membership is checked separately from authentication. A valid access token does not grant
-access to another organization's data.
-
-Refresh tokens are random opaque secrets. Only their SHA-256 hashes are persisted, and
-refreshing rotates the token by revoking the previous session and issuing a new one.
-
-For production, `SLADECK_JWT_SECRET` must be configured with a strong random secret; the
-application rejects the development default when `SLADECK_ENVIRONMENT=production`.
-
-Ownership transfer is deliberately not part of the generic role-update endpoint. This
-prevents accidental creation or removal of owners before a dedicated ownership-transfer
-workflow is designed.
-
-
-## Request workflow and SLA engine
-
-SLADeck requests are organization-scoped operational records with a requester, optional
-assignee, priority, status and required SLA policy.
-
-Implemented request statuses:
-
-- `open`
-- `in_progress`
-- `waiting`
-- `resolved`
-- `closed`
-
-Implemented priorities:
-
-- `urgent`
-- `high`
-- `normal`
-- `low`
-
-The SLA engine is independent from FastAPI and persistence. It receives the request
-creation timestamp, priority and SLA policy durations and returns first-response and
-resolution deadlines.
-
-Priority scales the policy's base durations:
-
-| Priority | SLA factor |
-| --- | ---: |
-| urgent | 0.25x |
-| high | 0.50x |
-| normal | 1.00x |
-| low | 2.00x |
-
-The API exposes SLA state as `healthy`, `warning`, `breached` or `completed`.
-Before the first response, SLA health is calculated against the first-response deadline;
-after a first response, it is calculated against the resolution deadline.
-
-Deadlines are stored as a snapshot on each request. Editing an SLA policy does not
-retroactively rewrite existing request deadlines. A request recalculates its deadlines
-when its own priority or SLA policy changes.
-
-Tenant safety is enforced twice: API queries require organization membership, and the
-database prevents a request from referencing an assignee or SLA policy belonging to a
-different organization.
-
-### SLA policy endpoints
-
-- `GET /organizations/{organization_id}/sla-policies`
-- `POST /organizations/{organization_id}/sla-policies`
-- `GET /organizations/{organization_id}/sla-policies/{policy_id}`
-- `PATCH /organizations/{organization_id}/sla-policies/{policy_id}`
-- `DELETE /organizations/{organization_id}/sla-policies/{policy_id}`
-
-Policies in use cannot be deleted.
-
-### Request endpoints
-
-- `GET /organizations/{organization_id}/requests`
-- `POST /organizations/{organization_id}/requests`
-- `GET /organizations/{organization_id}/requests/{request_id}`
-- `PATCH /organizations/{organization_id}/requests/{request_id}`
-- `DELETE /organizations/{organization_id}/requests/{request_id}`
-- `POST /organizations/{organization_id}/requests/{request_id}/first-response`
-
-Request listing supports filters for status, priority and assignee.
-
-
-## Comments and immutable audit trail
-
-Requests now have a chronological collaboration and audit history.
-
-Any organization member can add and read request comments:
-
-- `GET /organizations/{organization_id}/requests/{request_id}/comments`
-- `POST /organizations/{organization_id}/requests/{request_id}/comments`
-
-The combined activity timeline is available at:
-
-- `GET /organizations/{organization_id}/requests/{request_id}/activity`
-
-The audit trail records important request lifecycle events, including:
-
-- request creation;
-- first response;
-- status changes;
-- priority changes;
-- assignee changes;
-- SLA policy changes;
-- comment creation.
-
-Audit events are append-only. SLADeck does not expose update/delete APIs for audit events,
-and PostgreSQL also installs a trigger that rejects direct `UPDATE` or `DELETE` operations
-against the `audit_events` table.
-
-Requests are retained for audit history, so the normal request API no longer physically
-deletes them. A request should be completed through the `resolved` / `closed` status
-workflow instead.
-
-Comments and audit records are constrained to the same organization and request at the
-database level, preserving tenant isolation even if application code is changed later.
-
-
-## Background SLA worker
-
-SLA deadline checks now run outside the HTTP request/response path.
-
-SLADeck uses:
-
-- **Redis** as the Celery broker/result backend;
-- **Celery worker** for asynchronous SLA checks;
-- **Celery Beat** for the recurring one-minute schedule;
-- PostgreSQL for durable notification records and audit events.
-
-The worker evaluates active requests and creates at most one notification for each request/stage/kind combination:
-
-- `first_response` + `warning`;
-- `first_response` + `breached`;
-- `resolution` + `warning`;
-- `resolution` + `breached`.
-
-Idempotence is enforced at the database level with a unique constraint, so retrying the same scheduled job does not create duplicate escalation records. Worker-created escalations are also written to the immutable audit trail.
-
-The notification history is available at:
-
-- `GET /organizations/{organization_id}/requests/{request_id}/sla-notifications`
-
-### Run the worker locally
-
-Start Redis first, then run the API and worker processes separately.
-
-```bash
-redis-server
-```
-
-Worker:
-
-```bash
-cd backend
-celery -A sladeck.worker.celery_app worker --loglevel=INFO
-```
-
-Scheduler:
-
-```bash
-cd backend
-celery -A sladeck.worker.celery_app beat --loglevel=INFO
-```
-
-Only one Beat scheduler should own a given periodic schedule in a deployment.
+See [docs/architecture.md](docs/architecture.md) for the domain model, tenant isolation, SLA engine, background processing and API boundaries.

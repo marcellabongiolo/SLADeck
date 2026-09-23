@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +19,12 @@ class Settings(BaseSettings):
         env_file=".env",
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def validate_production_secret(self) -> "Settings":
+        if self.environment == "production" and self.jwt_secret == "development-only-change-me":
+            raise ValueError("SLADECK_JWT_SECRET must be configured in production")
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

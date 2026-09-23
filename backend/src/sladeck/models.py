@@ -142,6 +142,7 @@ class SLAPolicy(Base):
     __tablename__ = "sla_policies"
     __table_args__ = (
         UniqueConstraint("organization_id", "name", name="uq_sla_policy_org_name"),
+        UniqueConstraint("id", "organization_id", name="uq_sla_policy_id_org"),
         Index("ix_sla_policies_organization_id", "organization_id"),
     )
 
@@ -185,6 +186,12 @@ class Request(Base):
             name="fk_requests_assignee_membership",
             ondelete="RESTRICT",
         ),
+        ForeignKeyConstraint(
+            ["sla_policy_id", "organization_id"],
+            ["sla_policies.id", "sla_policies.organization_id"],
+            name="fk_requests_sla_policy_org",
+            ondelete="SET NULL",
+        ),
         Index("ix_requests_org_status", "organization_id", "status"),
         Index("ix_requests_org_priority", "organization_id", "priority"),
         Index("ix_requests_org_assignee", "organization_id", "assignee_id"),
@@ -210,11 +217,7 @@ class Request(Base):
     )
     requester_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
-    sla_policy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid,
-        ForeignKey("sla_policies.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    sla_policy_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     first_response_due_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,

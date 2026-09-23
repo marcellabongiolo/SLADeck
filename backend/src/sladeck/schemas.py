@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from .models import MembershipRole, RequestPriority, RequestStatus
 
@@ -86,6 +86,12 @@ class SLAPolicyCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     first_response_minutes: int = Field(gt=0, le=43200)
     resolution_minutes: int = Field(gt=0, le=525600)
+
+    @model_validator(mode="after")
+    def validate_durations(self) -> "SLAPolicyCreate":
+        if self.resolution_minutes < self.first_response_minutes:
+            raise ValueError("resolution_minutes must be >= first_response_minutes")
+        return self
 
 
 class SLAPolicyUpdate(BaseModel):

@@ -102,6 +102,7 @@ class Organization(Base):
     requests: Mapped[list["Request"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
+        overlaps="sla_policy,requests",
     )
 
 
@@ -142,6 +143,7 @@ class SLAPolicy(Base):
     __tablename__ = "sla_policies"
     __table_args__ = (
         UniqueConstraint("organization_id", "name", name="uq_sla_policy_org_name"),
+        UniqueConstraint("id", "organization_id", name="uq_sla_policy_id_org"),
         Index("ix_sla_policies_organization_id", "organization_id"),
     )
 
@@ -167,7 +169,10 @@ class SLAPolicy(Base):
     )
 
     organization: Mapped[Organization] = relationship(back_populates="sla_policies")
-    requests: Mapped[list["Request"]] = relationship(back_populates="sla_policy")
+    requests: Mapped[list["Request"]] = relationship(
+        back_populates="sla_policy",
+        overlaps="organization,requests",
+    )
 
 
 class Request(Base):
@@ -183,6 +188,12 @@ class Request(Base):
             ["assignee_id", "organization_id"],
             ["memberships.user_id", "memberships.organization_id"],
             name="fk_requests_assignee_membership",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["sla_policy_id", "organization_id"],
+            ["sla_policies.id", "sla_policies.organization_id"],
+            name="fk_requests_sla_policy_org",
             ondelete="RESTRICT",
         ),
         Index("ix_requests_org_status", "organization_id", "status"),
@@ -210,12 +221,12 @@ class Request(Base):
     )
     requester_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
     assignee_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
-    sla_policy_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid,
-        ForeignKey("sla_policies.id", ondelete="SET NULL"),
+    sla_policy_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    first_response_due_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
         nullable=True,
     )
-    first_response_due_at: Mapped[datetime | None] = mapped_column(
+    first_responded_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
@@ -236,8 +247,14 @@ class Request(Base):
         onupdate=func.now(),
     )
 
-    organization: Mapped[Organization] = relationship(back_populates="requests")
-    sla_policy: Mapped[SLAPolicy | None] = relationship(back_populates="requests")
+    organization: Mapped[Organization] = relationship(
+        back_populates="requests",
+        overlaps="sla_policy,requests",
+    )
+    sla_policy: Mapped[SLAPolicy | None] = relationship(
+        back_populates="requests",
+        overlaps="organization,requests",
+    )
 
 
 

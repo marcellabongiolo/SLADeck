@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
     database_url: str = "postgresql+psycopg://sladeck:sladeck@localhost:5432/sladeck"
-    jwt_secret: str = "development-only-change-me"
+    jwt_secret: str = "development-only-change-me-use-32-bytes-minimum"
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 15
     refresh_token_days: int = 14
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_secret(self) -> "Settings":
-        if self.environment == "production" and self.jwt_secret == "development-only-change-me":
+        if self.environment == "production" and self.jwt_secret == "development-only-change-me-use-32-bytes-minimum":
             raise ValueError("SLADECK_JWT_SECRET must be configured in production")
         return self
 

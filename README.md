@@ -156,3 +156,70 @@ application rejects the development default when `SLADECK_ENVIRONMENT=production
 Ownership transfer is deliberately not part of the generic role-update endpoint. This
 prevents accidental creation or removal of owners before a dedicated ownership-transfer
 workflow is designed.
+
+
+## Request workflow and SLA engine
+
+SLADeck requests are organization-scoped operational records with a requester, optional
+assignee, priority, status and required SLA policy.
+
+Implemented request statuses:
+
+- `open`
+- `in_progress`
+- `waiting`
+- `resolved`
+- `closed`
+
+Implemented priorities:
+
+- `urgent`
+- `high`
+- `normal`
+- `low`
+
+The SLA engine is independent from FastAPI and persistence. It receives the request
+creation timestamp, priority and SLA policy durations and returns first-response and
+resolution deadlines.
+
+Priority scales the policy's base durations:
+
+| Priority | SLA factor |
+| --- | ---: |
+| urgent | 0.25x |
+| high | 0.50x |
+| normal | 1.00x |
+| low | 2.00x |
+
+The API exposes SLA state as `healthy`, `warning`, `breached` or `completed`.
+Before the first response, SLA health is calculated against the first-response deadline;
+after a first response, it is calculated against the resolution deadline.
+
+Deadlines are stored as a snapshot on each request. Editing an SLA policy does not
+retroactively rewrite existing request deadlines. A request recalculates its deadlines
+when its own priority or SLA policy changes.
+
+Tenant safety is enforced twice: API queries require organization membership, and the
+database prevents a request from referencing an assignee or SLA policy belonging to a
+different organization.
+
+### SLA policy endpoints
+
+- `GET /organizations/{organization_id}/sla-policies`
+- `POST /organizations/{organization_id}/sla-policies`
+- `GET /organizations/{organization_id}/sla-policies/{policy_id}`
+- `PATCH /organizations/{organization_id}/sla-policies/{policy_id}`
+- `DELETE /organizations/{organization_id}/sla-policies/{policy_id}`
+
+Policies in use cannot be deleted.
+
+### Request endpoints
+
+- `GET /organizations/{organization_id}/requests`
+- `POST /organizations/{organization_id}/requests`
+- `GET /organizations/{organization_id}/requests/{request_id}`
+- `PATCH /organizations/{organization_id}/requests/{request_id}`
+- `DELETE /organizations/{organization_id}/requests/{request_id}`
+- `POST /organizations/{organization_id}/requests/{request_id}/first-response`
+
+Request listing supports filters for status, priority and assignee.

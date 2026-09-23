@@ -111,7 +111,7 @@ class RequestCreate(BaseModel):
     description: str = Field(default="", max_length=20000)
     priority: RequestPriority = RequestPriority.normal
     assignee_id: uuid.UUID | None = None
-    sla_policy_id: uuid.UUID | None = None
+    sla_policy_id: uuid.UUID
 
 
 class RequestUpdate(BaseModel):

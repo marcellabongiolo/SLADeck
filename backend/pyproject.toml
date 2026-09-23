@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sladeck-api"
+version = "0.1.0"
+description = "FastAPI backend for SLADeck."
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi==0.141.1",
+  "pydantic-settings>=2.14,<3",
+  "uvicorn[standard]>=0.53,<0.54",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<0.29",
+  "pytest>=9,<10",
+  "pytest-cov>=7,<8",
+  "ruff>=0.16,<0.17",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sladeck"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.coverage.run]
+source = ["sladeck"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 90

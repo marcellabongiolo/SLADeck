@@ -30,6 +30,9 @@ def test_alembic_builds_core_schema_from_empty_database(postgres_url: str) -> No
             "requests",
             "auth_sessions",
         }.issubset(tables)
+
+        request_columns = {column["name"] for column in inspect(engine).get_columns("requests")}
+        assert "first_responded_at" in request_columns
     finally:
         engine.dispose()
         command.downgrade(config, "base")

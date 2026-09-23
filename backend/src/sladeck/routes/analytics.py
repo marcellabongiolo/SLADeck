@@ -3,11 +3,11 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from fastapi import APIRouter, Depends
-from sqlalchemy import case, func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ..db import get_db
-from ..dependencies import get_current_user, get_organization_membership
-from ..models import Membership, Request, RequestPriority, RequestStatus, SLANotification, User
+from ..dependencies import get_organization_membership
+from ..models import Membership, Request, RequestPriority, RequestStatus, SLANotification
 from ..schemas import SLAAnalyticsRead, NotificationRead
 
 router = APIRouter(prefix="/organizations/{organization_id}", tags=["analytics"])
@@ -30,14 +30,13 @@ def analytics(
     filters=[Request.organization_id==organization_id]
     if start: filters.append(Request.created_at>=start)
     if end: filters.append(Request.created_at<=end)
-    rows=list(session.execute(select(Request.status,Request.priority,Request.assignee_id,Request.sla_state if hasattr(Request,"sla_state") else Request.id).where(*filters)))
     requests=list(session.scalars(select(Request).where(*filters)))
     counts={s.value:0 for s in RequestStatus}; priorities={p.value:0 for p in RequestPriority}; workload={}
     healthy=warning=breached=0
     for r in requests:
         counts[r.status.value]+=1; priorities[r.priority.value]+=1
         workload[str(r.assignee_id) if r.assignee_id else "unassigned"]=workload.get(str(r.assignee_id) if r.assignee_id else "unassigned",0)+1
-        state=getattr(r,"sla_state","healthy")
+        state=r.sla_state
         if state=="warning": warning+=1
         elif state=="breached": breached+=1
         else: healthy+=1

@@ -35,6 +35,7 @@ def test_alembic_builds_core_schema_from_empty_database(postgres_url: str) -> No
             "auth_sessions",
             "comments",
             "audit_events",
+            "sla_notifications",
         }.issubset(tables)
 
         request_columns = {column["name"] for column in inspect(engine).get_columns("requests")}

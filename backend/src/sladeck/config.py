@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
     database_url: str = "postgresql+psycopg://sladeck:sladeck@localhost:5432/sladeck"
+    redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = "development-only-change-me-use-32-bytes-minimum"
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 15

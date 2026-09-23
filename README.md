@@ -85,3 +85,37 @@ npm run dev
 The web app will be available at `http://localhost:3000`.
 
 PostgreSQL, Alembic, authentication and the SLA domain model belong to later issues and are intentionally not claimed as implemented yet.
+
+
+## PostgreSQL domain foundation
+
+The database layer uses SQLAlchemy 2 with PostgreSQL and Alembic migrations.
+
+The initial relational model contains:
+
+- `User`
+- `Organization`
+- `Membership`
+- `SLAPolicy`
+- `Request`
+
+`Membership` connects a user to an organization with one of the planned roles. Requests
+store an explicit `organization_id`, and requester/assignee references are constrained
+against memberships in that same organization. This adds a database-level tenant-safety
+invariant before application authorization is implemented.
+
+With `SLADECK_DATABASE_URL` pointing to a PostgreSQL database:
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+To roll the current schema back:
+
+```bash
+alembic downgrade base
+```
+
+CI starts a real PostgreSQL service and verifies both the ORM relationships and the
+ability to create the schema from an empty database using Alembic.

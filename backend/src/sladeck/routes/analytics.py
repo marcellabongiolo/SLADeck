@@ -10,14 +10,9 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..dependencies import get_organization_membership
-from ..models import (
-    Membership,
-    Request,
-    RequestPriority,
-    RequestStatus,
-    SLANotification,
-)
+from ..models import Membership, Request, RequestPriority, RequestStatus, SLANotification
 from ..schemas import SLAAnalyticsRead, NotificationRead
+from ..sla import calculate_sla_state
 
 router = APIRouter(prefix="/organizations/{organization_id}", tags=["analytics"])
 
@@ -59,7 +54,14 @@ def analytics(
         assignee = str(request.assignee_id) if request.assignee_id else "unassigned"
         workload[assignee] = workload.get(assignee, 0) + 1
 
-        state = request.sla_state
+        state = calculate_sla_state(
+            status=request.status,
+            created_at=request.created_at,
+            first_response_due_at=request.first_response_due_at,
+            first_responded_at=request.first_responded_at,
+            resolution_due_at=request.resolution_due_at,
+            resolved_at=request.resolved_at,
+        )
         if state == "warning":
             warning += 1
         elif state == "breached":

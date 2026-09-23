@@ -233,3 +233,67 @@ def test_activity_is_tenant_scoped_and_audit_has_no_mutation_api(client: TestCli
 
     second_policy = create_policy(client, second_token, second_org["id"], "Other")
     assert second_policy["organization_id"] == second_org["id"]
+
+
+
+def test_sla_notification_history_is_tenant_scoped(client: TestClient) -> None:
+    first = register(client, "notification-first@example.com", "Notification First")
+    second = register(client, "notification-second@example.com", "Notification Second")
+    first_token = login(client, first["email"])
+    second_token = login(client, second["email"])
+
+    first_org = create_org(client, first_token, "Notification First Org", "notification-first")
+    second_org = create_org(client, second_token, "Notification Second Org", "notification-second")
+    policy = create_policy(
+        client,
+        first_token,
+        first_org["id"],
+        "Fast",
+        first_response=10,
+        resolution=60,
+    )
+
+    created = client.post(
+        f"/organizations/{first_org['id']}/requests",
+        headers=headers(first_token),
+        json={
+            "title": "SLA notification history",
+            "description": "",
+            "priority": "normal",
+            "sla_policy_id": policy["id"],
+        },
+    )
+    assert created.status_code == 201
+    request_id = created.json()["id"]
+
+    own = client.get(
+        f"/organizations/{first_org['id']}/requests/{request_id}/sla-notifications",
+        headers=headers(first_token),
+    )
+    assert own.status_code == 200
+    assert own.json() == []
+
+    cross_tenant = client.get(
+        f"/organizations/{first_org['id']}/requests/{request_id}/sla-notifications",
+        headers=headers(second_token),
+    )
+    assert cross_tenant.status_code == 403
+
+    other_org_request = client.post(
+        f"/organizations/{second_org['id']}/requests",
+        headers=headers(second_token),
+        json={
+            "title": "Other SLA notification history",
+            "description": "",
+            "priority": "normal",
+            "sla_policy_id": create_policy(
+                client,
+                second_token,
+                second_org["id"],
+                "Other Fast",
+                first_response=10,
+                resolution=60,
+            )["id"],
+        },
+    )
+    assert other_org_request.status_code == 201

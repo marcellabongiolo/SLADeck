@@ -112,6 +112,7 @@ def activity_timeline(
             select(AuditEvent).where(
                 AuditEvent.organization_id == organization_id,
                 AuditEvent.request_id == request_id,
+                AuditEvent.event_type != "comment_added",
             )
         )
     )

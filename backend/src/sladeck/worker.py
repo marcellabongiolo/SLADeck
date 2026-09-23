@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import UUID
-
 from celery import Celery
 
 from .config import get_settings

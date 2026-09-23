@@ -4,7 +4,7 @@ SLADeck is a full-stack SaaS project for teams that manage incoming requests, ow
 
 The project is being built as a multi-tenant product with a Python/FastAPI backend, PostgreSQL, Redis-backed background work and a Next.js/TypeScript frontend.
 
-> Status: early development. Features are documented as implemented only after they are merged and covered by tests.
+> Status: early development. The initial FastAPI + Next.js foundation is being implemented through Issue #1. Features are documented as implemented only after they are merged and covered by tests.
 
 ## Product idea
 
@@ -48,3 +48,40 @@ Issue -> branch -> implementation -> tests -> pull request -> CI -> merge
 ```
 
 The repository will evolve issue by issue so the Git history reflects the engineering process rather than a single generated code dump.
+
+
+## Foundation development
+
+The first implementation milestone introduces:
+
+- a FastAPI backend package;
+- environment-based backend settings;
+- a health endpoint at `GET /health`;
+- a Next.js 16 + React 19 + TypeScript frontend shell;
+- strict TypeScript validation;
+- pytest + Ruff backend checks;
+- GitHub Actions for backend and frontend validation.
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn sladeck.api:app --reload
+```
+
+The API will be available at `http://localhost:8000`.
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The web app will be available at `http://localhost:3000`.
+
+PostgreSQL, Alembic, authentication and the SLA domain model belong to later issues and are intentionally not claimed as implemented yet.

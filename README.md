@@ -258,3 +258,52 @@ workflow instead.
 
 Comments and audit records are constrained to the same organization and request at the
 database level, preserving tenant isolation even if application code is changed later.
+
+
+## Background SLA worker
+
+SLA deadline checks now run outside the HTTP request/response path.
+
+SLADeck uses:
+
+- **Redis** as the Celery broker/result backend;
+- **Celery worker** for asynchronous SLA checks;
+- **Celery Beat** for the recurring one-minute schedule;
+- PostgreSQL for durable notification records and audit events.
+
+The worker evaluates active requests and creates at most one notification for each request/stage/kind combination:
+
+- `first_response` + `warning`;
+- `first_response` + `breached`;
+- `resolution` + `warning`;
+- `resolution` + `breached`.
+
+Idempotence is enforced at the database level with a unique constraint, so retrying the same scheduled job does not create duplicate escalation records. Worker-created escalations are also written to the immutable audit trail.
+
+The notification history is available at:
+
+- `GET /organizations/{organization_id}/requests/{request_id}/sla-notifications`
+
+### Run the worker locally
+
+Start Redis first, then run the API and worker processes separately.
+
+```bash
+redis-server
+```
+
+Worker:
+
+```bash
+cd backend
+celery -A sladeck.worker.celery_app worker --loglevel=INFO
+```
+
+Scheduler:
+
+```bash
+cd backend
+celery -A sladeck.worker.celery_app beat --loglevel=INFO
+```
+
+Only one Beat scheduler should own a given periodic schedule in a deployment.

@@ -54,15 +54,15 @@ def create_organization(
 ) -> Organization:
     organization = Organization(name=payload.name.strip(), slug=payload.slug)
     session.add(organization)
-    session.flush()
-    session.add(
-        Membership(
-            user_id=current_user.id,
-            organization_id=organization.id,
-            role=MembershipRole.owner,
-        )
-    )
     try:
+        session.flush()
+        session.add(
+            Membership(
+                user_id=current_user.id,
+                organization_id=organization.id,
+                role=MembershipRole.owner,
+            )
+        )
         session.commit()
     except IntegrityError as exc:
         session.rollback()

@@ -8,6 +8,7 @@ from .routes.request_activity import router as request_activity_router
 from .routes.requests import router as requests_router
 from .routes.sla_notifications import router as sla_notifications_router
 from .routes.sla_policies import router as sla_policies_router
+from .routes.analytics import router as analytics_router
 
 
 def create_app() -> FastAPI:
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(requests_router)
     app.include_router(request_activity_router)
     app.include_router(sla_notifications_router)
+    app.include_router(analytics_router)
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:

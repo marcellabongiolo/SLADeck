@@ -39,3 +39,8 @@ export const firstResponse=(t:string,org:string,id:string)=>request<RequestItem>
 export const comments=(t:string,org:string,id:string)=>request<Comment[]>(`/organizations/${org}/requests/${id}/comments`,{},t);
 export const addComment=(t:string,org:string,id:string,body:string)=>request<Comment>(`/organizations/${org}/requests/${id}/comments`,{method:"POST",body:JSON.stringify({body})},t);
 export const activity=(t:string,org:string,id:string)=>request<Activity[]>(`/organizations/${org}/requests/${id}/activity`,{},t);
+
+export type Analytics={open_requests:number;healthy_requests:number;warning_requests:number;breached_requests:number;breach_rate_pct:number;by_status:Record<string,number>;by_priority:Record<string,number>;by_assignee:Array<{assignee_id:string;name:string;count:number}>;period_start:string|null;period_end:string|null};
+export type Notification={id:string;organization_id:string;request_id:string;stage:string;kind:string;due_at:string;data:Record<string,unknown>;created_at:string;title:string;message:string};
+export const analytics=(t:string,org:string,start?:string,end?:string)=>{const p=new URLSearchParams();if(start)p.set("start",start);if(end)p.set("end",end);return request<Analytics>(`/organizations/${org}/analytics${p.size?`?${p}`:""}`,{},t)};
+export const notifications=(t:string,org:string)=>request<Notification[]>(`/organizations/${org}/notifications`,{},t);

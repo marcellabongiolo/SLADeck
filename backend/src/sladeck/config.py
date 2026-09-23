@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_name: str = "SLADeck API"
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
+    database_url: str = "postgresql+psycopg://sladeck:sladeck@localhost:5432/sladeck"
 
     model_config = SettingsConfigDict(
         env_prefix="SLADECK_",

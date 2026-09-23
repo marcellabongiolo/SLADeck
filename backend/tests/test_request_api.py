@@ -253,14 +253,22 @@ def test_policy_crud_and_in_use_policy_cannot_be_deleted(client: TestClient) -> 
     )
     assert blocked_delete.status_code == 409
 
-    deleted_request = client.delete(
+    retained_request = client.delete(
         f"/organizations/{org['id']}/requests/{request.json()['id']}",
         headers=headers(owner_token),
     )
-    assert deleted_request.status_code == 204
+    assert retained_request.status_code == 409
+    assert "retained for audit history" in retained_request.json()["detail"]
 
-    deleted_policy = client.delete(
+    still_blocked = client.delete(
         f"/organizations/{org['id']}/sla-policies/{policy['id']}",
+        headers=headers(owner_token),
+    )
+    assert still_blocked.status_code == 409
+
+    unused_policy = create_policy(client, owner_token, org["id"], "Unused")
+    deleted_policy = client.delete(
+        f"/organizations/{org['id']}/sla-policies/{unused_policy['id']}",
         headers=headers(owner_token),
     )
     assert deleted_policy.status_code == 204

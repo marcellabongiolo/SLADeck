@@ -223,3 +223,38 @@ Policies in use cannot be deleted.
 - `POST /organizations/{organization_id}/requests/{request_id}/first-response`
 
 Request listing supports filters for status, priority and assignee.
+
+
+## Comments and immutable audit trail
+
+Requests now have a chronological collaboration and audit history.
+
+Any organization member can add and read request comments:
+
+- `GET /organizations/{organization_id}/requests/{request_id}/comments`
+- `POST /organizations/{organization_id}/requests/{request_id}/comments`
+
+The combined activity timeline is available at:
+
+- `GET /organizations/{organization_id}/requests/{request_id}/activity`
+
+The audit trail records important request lifecycle events, including:
+
+- request creation;
+- first response;
+- status changes;
+- priority changes;
+- assignee changes;
+- SLA policy changes;
+- comment creation.
+
+Audit events are append-only. SLADeck does not expose update/delete APIs for audit events,
+and PostgreSQL also installs a trigger that rejects direct `UPDATE` or `DELETE` operations
+against the `audit_events` table.
+
+Requests are retained for audit history, so the normal request API no longer physically
+deletes them. A request should be completed through the `resolved` / `closed` status
+workflow instead.
+
+Comments and audit records are constrained to the same organization and request at the
+database level, preserving tenant isolation even if application code is changed later.

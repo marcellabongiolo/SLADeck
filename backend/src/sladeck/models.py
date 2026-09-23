@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKeyConstraint,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -196,6 +197,7 @@ class Request(Base):
             name="fk_requests_sla_policy_org",
             ondelete="RESTRICT",
         ),
+        UniqueConstraint("id", "organization_id", name="uq_request_id_org"),
         Index("ix_requests_org_status", "organization_id", "status"),
         Index("ix_requests_org_priority", "organization_id", "priority"),
         Index("ix_requests_org_assignee", "organization_id", "assignee_id"),
@@ -281,3 +283,66 @@ class AuthSession(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="auth_sessions")
+
+
+
+class Comment(Base):
+    __tablename__ = "comments"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["request_id", "organization_id"],
+            ["requests.id", "requests.organization_id"],
+            name="fk_comments_request_org",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["author_id", "organization_id"],
+            ["memberships.user_id", "memberships.organization_id"],
+            name="fk_comments_author_membership",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_comments_request_created", "request_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    author_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+
+class AuditEvent(Base):
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["request_id", "organization_id"],
+            ["requests.id", "requests.organization_id"],
+            name="fk_audit_events_request_org",
+            ondelete="RESTRICT",
+        ),
+        ForeignKeyConstraint(
+            ["actor_user_id", "organization_id"],
+            ["memberships.user_id", "memberships.organization_id"],
+            name="fk_audit_events_actor_membership",
+            ondelete="RESTRICT",
+        ),
+        Index("ix_audit_events_request_created", "request_id", "created_at"),
+        Index("ix_audit_events_org_type", "organization_id", "event_type"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    event_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

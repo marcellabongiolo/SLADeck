@@ -4,10 +4,12 @@ import os
 from collections.abc import Generator
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
+from sladeck.api import create_app
 from sladeck.db import Base
 
 
@@ -35,3 +37,9 @@ def db_engine(postgres_url: str) -> Generator[Engine, None, None]:
 def db_session(db_engine: Engine) -> Generator[Session, None, None]:
     with Session(db_engine, expire_on_commit=False) as session:
         yield session
+
+
+@pytest.fixture
+def client(db_engine: Engine) -> Generator[TestClient, None, None]:
+    with TestClient(create_app()) as test_client:
+        yield test_client

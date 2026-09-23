@@ -56,6 +56,10 @@ class User(Base):
         nullable=False,
         server_default=func.now(),
     )
+    auth_sessions: Mapped[list["AuthSession"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -234,3 +238,29 @@ class Request(Base):
 
     organization: Mapped[Organization] = relationship(back_populates="requests")
     sla_policy: Mapped[SLAPolicy | None] = relationship(back_populates="requests")
+
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    __table_args__ = (
+        Index("ix_auth_sessions_user_id", "user_id"),
+        Index("ix_auth_sessions_expires_at", "expires_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    refresh_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    user: Mapped[User] = relationship(back_populates="auth_sessions")

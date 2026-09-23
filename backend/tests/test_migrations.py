@@ -28,6 +28,7 @@ def test_alembic_builds_core_schema_from_empty_database(postgres_url: str) -> No
             "memberships",
             "sla_policies",
             "requests",
+            "auth_sessions",
         }.issubset(tables)
     finally:
         engine.dispose()

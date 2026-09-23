@@ -119,3 +119,40 @@ alembic downgrade base
 
 CI starts a real PostgreSQL service and verifies both the ORM relationships and the
 ability to create the schema from an empty database using Alembic.
+
+
+## Authentication and organization RBAC
+
+SLADeck uses Argon2 password hashing, signed short-lived access tokens and opaque refresh
+tokens backed by revocable database sessions.
+
+Implemented authentication endpoints:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /auth/me`
+
+Organization endpoints require a valid Bearer access token. Creating an organization
+automatically makes the creator its `owner`.
+
+Roles:
+
+- `owner` — highest organization role;
+- `admin` — can manage ordinary members and managers;
+- `manager` — organization member with elevated domain permissions reserved for later features;
+- `member` — standard organization member.
+
+Membership is checked separately from authentication. A valid access token does not grant
+access to another organization's data.
+
+Refresh tokens are random opaque secrets. Only their SHA-256 hashes are persisted, and
+refreshing rotates the token by revoking the previous session and issuing a new one.
+
+For production, `SLADECK_JWT_SECRET` must be configured with a strong random secret; the
+application rejects the development default when `SLADECK_ENVIRONMENT=production`.
+
+Ownership transfer is deliberately not part of the generic role-update endpoint. This
+prevents accidental creation or removal of owners before a dedicated ownership-transfer
+workflow is designed.

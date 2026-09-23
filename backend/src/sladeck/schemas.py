@@ -146,3 +146,41 @@ class RequestRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     sla_state: str
+
+
+
+class CommentCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=10000)
+
+
+class CommentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    request_id: uuid.UUID
+    author_id: uuid.UUID
+    body: str
+    created_at: datetime
+
+
+class AuditEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    request_id: uuid.UUID
+    actor_user_id: uuid.UUID | None
+    event_type: str
+    data: dict
+    created_at: datetime
+
+
+class ActivityItem(BaseModel):
+    kind: str
+    id: uuid.UUID
+    actor_user_id: uuid.UUID | None
+    event_type: str | None = None
+    body: str | None = None
+    data: dict = Field(default_factory=dict)
+    created_at: datetime

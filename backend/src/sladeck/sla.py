@@ -73,7 +73,10 @@ def calculate_sla_state(
         return "breached"
 
     total_window = active_due - created_at
-    warning_window = max(timedelta(minutes=15), total_window * 0.25)
+    warning_window = min(
+        timedelta(minutes=60),
+        max(timedelta(minutes=5), total_window * 0.25),
+    )
     if active_due - current <= warning_window:
         return "warning"
     return "healthy"

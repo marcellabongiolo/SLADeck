@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .routes.auth import router as auth_router
 from .routes.organizations import router as organizations_router
+from .routes.request_activity import router as request_activity_router
 from .routes.requests import router as requests_router
 from .routes.sla_policies import router as sla_policies_router
 
@@ -27,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(organizations_router)
     app.include_router(sla_policies_router)
     app.include_router(requests_router)
+    app.include_router(request_activity_router)
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:

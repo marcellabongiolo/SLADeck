@@ -192,3 +192,17 @@ class ActivityItem(BaseModel):
     body: str | None = None
     data: dict = Field(default_factory=dict)
     created_at: datetime
+
+
+
+class SLANotificationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    organization_id: uuid.UUID
+    request_id: uuid.UUID
+    stage: str
+    kind: str
+    due_at: datetime
+    data: dict
+    created_at: datetime

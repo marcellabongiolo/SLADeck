@@ -190,7 +190,7 @@ class Request(Base):
             ["sla_policy_id", "organization_id"],
             ["sla_policies.id", "sla_policies.organization_id"],
             name="fk_requests_sla_policy_org",
-            ondelete="SET NULL",
+            ondelete="RESTRICT",
         ),
         Index("ix_requests_org_status", "organization_id", "status"),
         Index("ix_requests_org_priority", "organization_id", "priority"),

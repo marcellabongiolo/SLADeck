@@ -206,3 +206,21 @@ class SLANotificationRead(BaseModel):
     due_at: datetime
     data: dict
     created_at: datetime
+
+
+class SLAAnalyticsRead(BaseModel):
+    open_requests: int
+    healthy_requests: int
+    warning_requests: int
+    breached_requests: int
+    breach_rate_pct: float
+    by_status: dict[str, int]
+    by_priority: dict[str, int]
+    by_assignee: list[dict[str, object]]
+    period_start: datetime | None = None
+    period_end: datetime | None = None
+
+
+class NotificationRead(SLANotificationRead):
+    title: str
+    message: str

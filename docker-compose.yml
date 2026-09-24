@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: sladeck
+      POSTGRES_PASSWORD: sladeck
+      POSTGRES_DB: sladeck
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U sladeck -d sladeck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes: [sladeck-postgres:/var/lib/postgresql/data]
+  redis:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    build: ./backend
+    command: ["alembic","upgrade","head"]
+    environment:
+      SLADECK_DATABASE_URL: postgresql+psycopg://sladeck:sladeck@postgres:5432/sladeck
+      SLADECK_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres: {condition: service_healthy}
+  api:
+    build: ./backend
+    environment:
+      SLADECK_ENVIRONMENT: production
+      SLADECK_DATABASE_URL: postgresql+psycopg://sladeck:sladeck@postgres:5432/sladeck
+      SLADECK_REDIS_URL: redis://redis:6379/0
+      SLADECK_JWT_SECRET: ${SLADECK_JWT_SECRET:?set SLADECK_JWT_SECRET in .env}
+      SLADECK_CORS_ORIGINS: http://localhost:3000
+    ports: ["8000:8000"]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD","python","-c","import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    build: ./backend
+    command: ["celery","-A","sladeck.worker:celery_app","worker","--loglevel=INFO"]
+    environment:
+      SLADECK_ENVIRONMENT: production
+      SLADECK_DATABASE_URL: postgresql+psycopg://sladeck:sladeck@postgres:5432/sladeck
+      SLADECK_REDIS_URL: redis://redis:6379/0
+      SLADECK_JWT_SECRET: ${SLADECK_JWT_SECRET:?set SLADECK_JWT_SECRET in .env}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  beat:
+    build: ./backend
+    command: ["celery","-A","sladeck.worker:celery_app","beat","--loglevel=INFO"]
+    environment:
+      SLADECK_ENVIRONMENT: production
+      SLADECK_DATABASE_URL: postgresql+psycopg://sladeck:sladeck@postgres:5432/sladeck
+      SLADECK_REDIS_URL: redis://redis:6379/0
+      SLADECK_JWT_SECRET: ${SLADECK_JWT_SECRET:?set SLADECK_JWT_SECRET in .env}
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+  frontend:
+    build:
+      context: ./frontend
+      args: {NEXT_PUBLIC_API_URL: http://localhost:8000}
+    environment: {NEXT_PUBLIC_API_URL: http://localhost:8000}
+    ports: ["3000:3000"]
+    depends_on: {api: {condition: service_healthy}}
+volumes:
+  sladeck-postgres:

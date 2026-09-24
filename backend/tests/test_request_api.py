@@ -299,3 +299,35 @@ def test_request_filters_work(client: TestClient) -> None:
     )
     assert filtered.status_code == 200
     assert [item["title"] for item in filtered.json()] == ["Urgent task"]
+
+
+def test_cross_tenant_request_list_and_activity_are_forbidden(client: TestClient) -> None:
+    first = register(client, "isolation-a@example.com", "Isolation A")
+    second = register(client, "isolation-b@example.com", "Isolation B")
+    first_token = login(client, first["email"])
+    second_token = login(client, second["email"])
+    first_org = create_org(client, first_token, "Isolation A", "isolation-a")
+    second_org = create_org(client, second_token, "Isolation B", "isolation-b")
+    policy = create_policy(client, first_token, first_org["id"])
+    created = client.post(f"/organizations/{first_org['id']}/requests", headers=headers(first_token), json={"title":"Private","description":"","priority":"normal","sla_policy_id":policy["id"]})
+    assert created.status_code == 201
+    request_id = created.json()["id"]
+    assert client.get(f"/organizations/{second_org['id']}/requests", headers=headers(first_token)).status_code == 403
+    assert client.get(f"/organizations/{first_org['id']}/requests/{request_id}/activity", headers=headers(second_token)).status_code == 403
+
+
+def test_analytics_are_organization_scoped_and_backed_by_real_requests(client: TestClient) -> None:
+    owner = register(client, "analytics-owner@example.com", "Analytics Owner")
+    token = login(client, owner["email"])
+    org = create_org(client, token, "Analytics Org", "analytics-org")
+    policy = create_policy(client, token, org["id"])
+    for title, priority in (("Urgent", "urgent"), ("Normal", "normal")):
+        response = client.post(f"/organizations/{org['id']}/requests", headers=headers(token), json={"title":title,"description":"","priority":priority,"sla_policy_id":policy["id"]})
+        assert response.status_code == 201
+    response = client.get(f"/organizations/{org['id']}/analytics", headers=headers(token))
+    assert response.status_code == 200
+    data = response.json()
+    assert data["open_requests"] == 2
+    assert data["by_priority"]["urgent"] == 1
+    assert data["by_priority"]["normal"] == 1
+    assert data["breach_rate_pct"] == 0.0

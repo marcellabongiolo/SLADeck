@@ -1,7 +1,7 @@
 "use client";
 import { useEffect,useState } from "react";
-import { activity,addComment,comments,getRequest,members,firstResponse,updateRequest,Activity,Comment,Membership,RequestItem } from "../../../lib/api";
-import { getAccessToken } from "../../../lib/session";
+import { activity,addComment,comments,getRequest,members,firstResponse,updateRequest,Activity,Comment,Membership,RequestItem } from "../../../../lib/api";
+import { getAccessToken } from "../../../../lib/session";
 export default function RequestDetail({params}:{params:Promise<{id:string}>}){
  const [id,setId]=useState(""),[org,setOrg]=useState(""),[token,setToken]=useState(""),[item,setItem]=useState<RequestItem|null>(null),[events,setEvents]=useState<Activity[]>([]),[notes,setNotes]=useState<Comment[]>([]),[team,setTeam]=useState<Membership[]>([]),[body,setBody]=useState(""),[error,setError]=useState("");
  useEffect(()=>{params.then(p=>setId(p.id));setOrg(new URLSearchParams(location.search).get("org")??"");const t=getAccessToken();if(!t)location.href="/login";else setToken(t)},[params]);

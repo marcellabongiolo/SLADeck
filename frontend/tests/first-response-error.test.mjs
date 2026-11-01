@@ -6,5 +6,5 @@ test('first response failures display feedback to users', () => {
   const page = readFileSync('app/dashboard/requests/[id]/page.tsx', 'utf8');
   assert.ok(page.includes('await firstResponse(token,org,id)'));
   assert.ok(page.includes('setError(e instanceof Error?e.message:"Unable to mark first response.")'));
-  assert.ok(page.includes('{error&&<p className="error">{error}</p>}'));
+  assert.ok(page.includes('{error&&<p className="error" role="alert">{error}</p>}'));
 });

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect,useMemo,useState } from "react";
 import { createOrganization,createRequest,organizations,policies,requests,analytics,notifications,Organization,RequestItem,SLAPolicy,Analytics,Notification } from "../../lib/api";
-import { getAccessToken } from "../../lib/session";
+import { clearSession, getAccessToken } from "../../lib/session";
 function Stat({label,value}:{label:string;value:string|number}){return <div className="stat"><span>{label}</span><strong>{value}</strong></div>}
 export default function Dashboard(){
  const [token,setToken]=useState<string|null>(null),[orgs,setOrgs]=useState<Organization[]>([]),[orgId,setOrgId]=useState(""),[items,setItems]=useState<RequestItem[]>([]),[sla,setSla]=useState<SLAPolicy[]>([]);
@@ -15,7 +15,7 @@ export default function Dashboard(){
  async function createReq(){if(!token||!orgId)return;try{await createRequest(token,orgId,{title,description,priority:reqPriority,sla_policy_id:policyId});setNewReq(false);setTitle("");setDescription("");setItems(await requests(token,orgId,{status,priority}))}catch(e){setError(e instanceof Error?e.message:"Unable to create request.")}}
  if(loading)return <main className="dashboard-shell"><p className="muted">Loading workspace...</p></main>;
  return <main className="dashboard-shell">
-  <header className="topbar"><div><p className="eyebrow">SLADeck workspace</p><h1>Request inbox</h1></div><div className="actions"><button className="secondary" onClick={()=>setNewOrg(true)}>New workspace</button><button className="secondary" onClick={()=>{localStorage.clear();location.href="/login"}}>Sign out</button></div></header>
+  <header className="topbar"><div><p className="eyebrow">SLADeck workspace</p><h1>Request inbox</h1></div><div className="actions"><button className="secondary" onClick={()=>setNewOrg(true)}>New workspace</button><button className="secondary" onClick={()=>{clearSession();location.href="/login"}}>Sign out</button></div></header>
   <section className="stats">{metrics&&<><Stat label="Open requests" value={metrics.open_requests}/><Stat label="Healthy" value={metrics.healthy_requests}/><Stat label="Warning" value={metrics.warning_requests}/><Stat label="Breached" value={metrics.breached_requests}/><Stat label="Breach rate" value={`${metrics.breach_rate_pct}%`}/></>}</section>
   <section className="toolbar"><select value={orgId} onChange={e=>setOrgId(e.target.value)}>{orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select><input placeholder="Search requests..." value={search} onChange={e=>setSearch(e.target.value)}/><select value={status} onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="waiting">Waiting</option><option value="resolved">Resolved</option></select><select value={priority} onChange={e=>setPriority(e.target.value)}><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select><button onClick={()=>setNewReq(true)}>+ New request</button></section>
   {error&&<p className="error">{error}</p>}{alerts.length>0&&<section className="dashboard-card alert-card"><h2>Notification center</h2>{alerts.slice(0,5).map(a=><a key={a.id} href={`/dashboard/requests/${a.request_id}?org=${orgId}`} className="alert"><strong>{a.title}</strong><span>{a.message}</span><small>{new Date(a.created_at).toLocaleString()}</small></a>)}</section>}

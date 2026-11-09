@@ -110,7 +110,9 @@ npm run build
 npm run dev
 ```
 
-For the frontend to call a non-default API, set `NEXT_PUBLIC_API_URL`.
+For the frontend to call a non-default API, set `NEXT_PUBLIC_API_URL` before building. Next.js embeds this public URL in the browser bundle; changing only the runtime environment does not update a built frontend.
+
+Compose reads `.env` at the repository root and passes this URL as a frontend build argument. It also uses `SLADECK_CORS_ORIGINS` for the API. For development without Docker, configure the frontend in `frontend/.env.local` and the backend in `backend/.env` (or export variables in their respective terminals). See [deployment preparation](docs/deployment.md).
 
 ## Main workflow
 

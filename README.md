@@ -104,7 +104,7 @@ The backend coverage configuration requires at least 90%.
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run typecheck
 npm run build
 npm run dev
@@ -165,4 +165,4 @@ The frontend validates the access token with `/auth/me` before loading the works
 
 ### Browser regression tests
 
-From `frontend/`, run `npm install`, `npm run build`, `npx playwright install chromium`, then `npm run test:e2e`. Chromium tests cover onboarding, a missing-session redirect, invalid credentials and sign-out. These frontend tests intercept API responses; the PostgreSQL-backed backend suite separately checks authorization and business behavior. CI runs both suites.
+From `frontend/`, run `npm ci`, `npm run build`, `npx playwright install chromium`, then `npm run test:e2e`. Chromium tests cover onboarding, a missing-session redirect, invalid credentials and sign-out. These frontend tests intercept API responses; the PostgreSQL-backed backend suite separately checks authorization and business behavior. CI runs both suites.

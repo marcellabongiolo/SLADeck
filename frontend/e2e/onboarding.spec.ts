@@ -85,6 +85,6 @@ test("failed login shows API feedback and permits another attempt", async ({ pag
   await page.getByLabel("Email", { exact: true }).fill(user.email);
   await page.getByLabel("Password", { exact: true }).fill("wrong-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByRole("alert")).toHaveText("Invalid email or password");
+  await expect(page.getByRole("alert").filter({ hasText: "Invalid email or password" })).toHaveText("Invalid email or password");
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
 });

@@ -9,17 +9,17 @@ export default function HomePage() {
   return (
     <main className="shell">
       <section className="hero">
-        <p className="eyebrow">SLADeck · Early Development</p>
+        <p className="eyebrow">SLADeck · Portfolio MVP</p>
         <h1>Keep operational requests owned, visible, and on time.</h1>
         <p className="lede">
           SLADeck is a team workspace for managing requests, responsibilities,
           priorities, and service-level deadlines.
         </p>
-        <div className="status">Foundation stack is running.</div>
+        <div className="actions"><a className="button-link" href="/register">Create account</a><a className="back" href="/login">Sign in</a></div>
       </section>
 
       <section className="panel">
-        <h2>Planned product foundation</h2>
+        <h2>Your operational workspace</h2>
         <ul>
           {foundations.map((item) => (
             <li key={item}>{item}</li>

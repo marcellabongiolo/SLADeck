@@ -17,7 +17,15 @@ export type Activity = {kind:string;id:string;actor_user_id:string|null;event_ty
 
 async function request<T>(path:string,init:RequestInit={},token?:string):Promise<T>{
  const response=await fetch(`${API_URL}${path}`,{...init,headers:{"Content-Type":"application/json",...(init.headers??{}),...(token?{Authorization:`Bearer ${token}`}:{})}});
- if(!response.ok){let detail="Request failed";try{detail=((await response.json()) as {detail?:string}).detail??detail}catch{} throw new Error(detail)}
+ if(!response.ok){
+   let detail="Request failed";
+   try {
+     const payload = await response.json() as {detail?: unknown};
+     if(typeof payload.detail==="string") detail=payload.detail;
+     else if(Array.isArray(payload.detail)) detail=payload.detail.map((item: {msg?: string})=>item.msg??"Invalid value").join("; ");
+   } catch {}
+   throw new Error(detail);
+ }
  if(response.status===204)return undefined as T;
  return (await response.json()) as T;
 }
@@ -44,3 +52,5 @@ export type Analytics={open_requests:number;healthy_requests:number;warning_requ
 export type Notification={id:string;organization_id:string;request_id:string;stage:string;kind:string;due_at:string;data:Record<string,unknown>;created_at:string;title:string;message:string};
 export const analytics=(t:string,org:string,start?:string,end?:string)=>{const p=new URLSearchParams();if(start)p.set("start",start);if(end)p.set("end",end);return request<Analytics>(`/organizations/${org}/analytics${p.size?`?${p}`:""}`,{},t)};
 export const notifications=(t:string,org:string)=>request<Notification[]>(`/organizations/${org}/notifications`,{},t);
+
+export const createPolicy=(t:string,org:string,p:{name:string;first_response_minutes:number;resolution_minutes:number})=>request<SLAPolicy>(`/organizations/${org}/sla-policies`,{method:"POST",body:JSON.stringify(p)},t);

@@ -104,7 +104,7 @@ The backend coverage configuration requires at least 90%.
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run typecheck
 npm run build
 npm run dev
@@ -155,3 +155,14 @@ GitHub Actions validates:
 ## Architecture documentation
 
 See [docs/architecture.md](docs/architecture.md) for the domain model, tenant isolation, SLA engine, background processing and API boundaries.
+
+
+## First workspace setup
+
+Open the frontend home page and choose **Create account**, or **Sign in** for an existing account. A new account can create a workspace, create its first SLA policy (response and resolution deadlines in minutes), then create requests using that policy. Policy creation is authorized by the backend for owners, admins and managers.
+
+The frontend validates the access token with `/auth/me` before loading the workspace. Tokens remain in browser local storage for this local MVP; an expired session requires signing in again.
+
+### Browser regression tests
+
+From `frontend/`, run `npm ci`, `npm run build`, `npx playwright install chromium`, then `npm run test:e2e`. Chromium tests cover onboarding, a missing-session redirect, invalid credentials and sign-out. These frontend tests intercept API responses; the PostgreSQL-backed backend suite separately checks authorization and business behavior. CI runs both suites.

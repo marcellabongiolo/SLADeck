@@ -67,10 +67,13 @@ jobs:
           node-version: "22"
           cache: "npm"
           cache-dependency-path: frontend/package.json
-      - run: npm install
+      - run: npm ci
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
 
   docker:
     runs-on: ubuntu-latest
